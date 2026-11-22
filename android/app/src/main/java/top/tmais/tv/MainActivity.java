@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.os.Bundle;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.Typeface;
@@ -34,7 +35,7 @@ public class MainActivity extends Activity {
         getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         hideSystemBars();
         if (!prefs.contains("id")) prefs.edit().putString("id", newHex(12)).putString("token", newHex(32)).apply();
-        if (prefs.getString("server", "").isEmpty()) showSetup(); else startPlayer();
+        if (prefs.getString("server", "").isEmpty()) showSetup(); else { startMonitor(); startPlayer(); }
     }
     private String newHex(int bytes) {
         byte[] b = new byte[bytes]; random.nextBytes(b); StringBuilder s = new StringBuilder();
@@ -55,8 +56,17 @@ public class MainActivity extends Activity {
         Button save=new Button(this);save.setText("CONECTAR TV");save.setTextColor(Color.WHITE);save.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xff0865f7));root.addView(save);
         TextView error=text("",15,0xffff9e9e);root.addView(error);
         root.addView(text("Depois de conectar, informe no painel o código mostrado nesta TV. Pressione VOLTAR ou MENU para acessar as configurações.",14,0xffb3c1db));
-        save.setOnClickListener(v->{String s=url.getText().toString().trim().replaceAll("/+$","");if(!s.startsWith("https://")){error.setText("Para segurança, use HTTPS com certificado válido.");return;}prefs.edit().putString("server",s).apply();startPlayer();});
+        save.setOnClickListener(v->{String s=url.getText().toString().trim().replaceAll("/+$","");if(!s.startsWith("https://")){error.setText("Para segurança, use HTTPS com certificado válido.");return;}prefs.edit().putString("server",s).apply();startMonitor();startPlayer();});
         setContentView(root);hideSystemBars();
+    }
+    private void startMonitor() {
+        try {
+            Intent launch = new Intent(this, WakeService.class);
+            if (android.os.Build.VERSION.SDK_INT >= 26) startForegroundService(launch);
+            else startService(launch);
+        } catch (RuntimeException e) {
+            android.util.Log.w("TMAIS-TV", "Monitor indisponível neste aparelho", e);
+        }
     }
     private void startPlayer() {
         if(browser!=null)browser.destroy();
